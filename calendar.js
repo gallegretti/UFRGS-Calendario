@@ -1,21 +1,24 @@
 ﻿/*
+* Gabriel Allegretti - 2015
 * Cria um arquivo com os horários das cadeiras da UFRGS no formato ICalendar, que então pode
 * ser importado em diversos calendários. Ver https://en.wikipedia.org/wiki/List_of_applications_with_iCalendar_support
-* Utiliza a versão 2.0 do ICalendar
-* Para utilizar, acesse o site da ufrgs e entre em serviços, então navegue para Informacoes do Aluno -> Atividades Correntes
-* Compatibilidade:
+* Utiliza a versão 2.0 do ICalendar, RFC 5545 http://tools.ietf.org/search/rfc5545
+* Para utilizar, acesse o site da ufrgs e entre em serviços, então navegue para Informacoes do Aluno -> Atividades Correntes, abra o
+* console para executar javascript e rode esse código
+* 	-Calendários testados:
 * Google Calendar: 	-Problemas na encodificação (palavras com acento não aparecem corretamente)
-* 					-Primeiro dia do semestre contem as disciplinas de todos os dias
 * Outlook Calendar: Sem problemas
 */
 
-// O nome do arquivo
-var file_name = "Calendario"
+// O nome do arquivo que será gerado
+var fileName = "Calendario"
+
+// Assume-se que o inicio do semestre é em uma segunda-feira
+// Uma solução mais robusta precisaria de uma biblioteca, como a Datejs
 // Datas sobre o semestre, formato aaaammdd
 var inicio_semestre = "20150803" // 03/08/2015
 var fim_semestre = "20151219"	 // 19/12/2015
 var debug = 0
-
 
 // Nome da disciplina
 var nome_aula 
@@ -45,6 +48,17 @@ var dicionario_dias = {
 "Sexta":  "FR",
 "Sábado": "SA",
 "Domingo":"SU" 
+}
+
+//Dado um dia da semana, retorna seu indice
+var indice_dias = {
+"MO" : 0,
+"TU" : 1,
+"WE" : 2,
+"TH" : 3,
+"FR" : 4,	
+"SA" : 5,
+"SU" : 6
 }
 
 //Le o horario da aula de uma string para as variaveis globais. Ex:
@@ -93,8 +107,14 @@ var Calendario = "BEGIN:VCALENDAR\n"
 function EscreveEvento()
 {
 	Calendario += "BEGIN:VEVENT\n"
-	Calendario += "DTSTART:" + inicio_semestre + "T" + inicio_aula + "00\n"// Inicio da aula
-	Calendario += "DTEND:" + inicio_semestre + "T" + fim_aula + "00\n"	   // Fim da aula
+	// DTSTART deve ser a primeira vez que o evento ocorre apos o inicio do semestre
+	// Se não for sincronizado, é undefined behaviour :( -> http://tools.ietf.org/search/rfc5545#page-167 (A.1 - 1)
+	// Uma solução mais robusta precisaria de uma biblioteca, como a Datejs
+	// Mas o semestre começa em uma segunda-feira:
+	var primeiraAula = Number(inicio_semestre)
+	primeiraAula += indice_dias[dia_aula] 
+	Calendario += "DTSTART:" + primeiraAula + "T" + inicio_aula + "00\n"// Inicio da aula
+	Calendario += "DTEND:" + primeiraAula + "T" + fim_aula + "00\n"	   // Fim da aula
 	Calendario += "RRULE:FREQ=WEEKLY;BYDAY=" + dia_aula + ";" + "UNTIL=" + fim_semestre + "\n"	 // Quando ocorr a aula		
 	Calendario += "LOCATION:" + lugar_aula + "\n"  // Onde vai ser a aula
 	Calendario += "CATEGORIES:Aula\n" 			   // Categoria do evento
@@ -114,10 +134,9 @@ if (typeof String.prototype.startsWith != 'function') {
 }
 
 //Le a tabela das disciplinas para a memoria
-var html = document.getElementsByClassName("modelo1")
-var table = html[1]
+var table = document.getElementsByClassName("modelo1")[1]
 
-//Para disciplina
+//Para cada disciplina (linha 0 é o 'header', então começa na 1)
 for (var i = 1; i < table.rows.length; i++)
 {
 	//Colunas/cells:
@@ -148,11 +167,12 @@ for (var i = 1; i < table.rows.length; i++)
 	
 	//Algumas disciplinas tem um campo extra: "Observação", que quando existe, é o ultimo elemento na coluna Horario - Local
 	//Se existir esse campo, lê ele e decrementa o childrenLen para evitar que ele seja lido como um horario
-	var childrenLen = table.rows[i].cells[3].childElementCount
-	if (table.rows[i].cells[3].children[childrenLen - 1].innerText.startsWith("Observação"))
+	var childElementCount = table.rows[i].cells[3].childElementCount
+	var lastChildInnerText = table.rows[i].cells[3].children[childElementCount - 1].innerText
+	if (lastChildInnerText.startsWith("Observação"))
 	{
-		descricao_aula = table.rows[i].cells[3].children[childrenLen].innerText
-		childrenLen--
+		descricao_aula = lastChildInnerText
+		childElementCount--
 	}
 	//Se nao houver uma descricao, limpa a string
 	else
@@ -160,14 +180,14 @@ for (var i = 1; i < table.rows.length; i++)
 		descricao_aula = ""
 	}
 	//Para item no bloco de horários
-	for (var j = 0; j < childrenLen; j++)
+	for (var j = 0; j < childElementCount; j++)
 	{
-		var horario = table.rows[i].cells[3].children[j]
+		var item = table.rows[i].cells[3].children[j]
 			
 		//Le horario caso esteja especificado
-		if (horario.childElementCount > 0)
+		if (item.childElementCount > 0)
 		{
-			var dia_horario = horario.childNodes[0].wholeText
+			var dia_horario = item.childNodes[0].wholeText
 		}
 		else
 		{
@@ -184,14 +204,16 @@ for (var i = 1; i < table.rows.length; i++)
 		}
 		
 		//Le local caso esteja especificado
-		if (horario.childElementCount > 0)
+		if (item.childElementCount > 0)
 		{
-			lugar_aula = horario.childNodes[1].innerText.trim()
+			lugar_aula = item.childNodes[1].innerText.trim()
 		}
 		else
 		{
 			lugar_aula = "Não especificado"
 		}
+		
+		//Cria o evento no calendario
 		EscreveEvento()
 	}
 
@@ -206,8 +228,9 @@ Calendario += "END:VCALENDAR\n"
 
 // Faz o download do calendario
 var file = window.document.createElement('a');
-file.href = window.URL.createObjectURL(new Blob([Calendario], {type: 'text/plain;charset=UTF-8', encoding: 'UTF-8'}));
-file.download = file_name + ".ics";
+//file.href = window.URL.createObjectURL(new Blob([Calendario], {type: 'text/plain;charset=UTF-8', encoding: 'UTF-8'}));
+file.href = window.URL.createObjectURL(new Blob([Calendario], {type: 'text/calendar;charset=UTF-8'}));
+file.download = fileName + ".ics";
 
 // Append anchor to body.
 document.body.appendChild(file)
