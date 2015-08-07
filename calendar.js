@@ -6,8 +6,8 @@
 * Configurado para o semestre 2015/2
 * Para utilizar, acesse o site da ufrgs e faça login. Então navegue para informações do aluno -> atividades correntes (ou acesse https://www1.ufrgs.br/intranet/portal/public/index.php?cods=1,1,2,9)
 * Navegadores testados:
-*	-Google Chrome: Sem problemas
-*	-Firefox:		Não funciona (innerText não suportado)
+*	-Google Chrome: Sem problemas (ctrl + shift + j)
+*	-Firefox:		Sem problemas (ctrl + shift + k), permitir javascript manualmente
 * Abra o console para executar javascript e rode esse código. O calendário será salvo pelo seu navegador.
 * 	-Calendários testados:
 * Google Calendar: 	Problemas na encodificação após importar(palavras com acento não aparecem corretamente)
@@ -22,6 +22,7 @@ var fileName = "Calendario"
 // Datas sobre o semestre, formato aaaammdd
 var inicio_semestre = "20150803" // 03/08/2015
 var fim_semestre = "20151219"	 // 19/12/2015
+var site_matricula = "https://www1.ufrgs.br/intranet/portal/public/index.php?cods=1,1,2,9"
 var debug = 0
 
 // Nome da disciplina
@@ -111,9 +112,10 @@ function LeHorario(linha)
 function main()
 {
 	
-	if (location.toString() != "https://www1.ufrgs.br/intranet/portal/public/index.php?cods=1,1,2,9")
+	if (location.toString() != site_matricula)
 	{
-		alert("Página errada")
+		alert("Redirecionando para a página certa")
+		window.location.replace(site_matricula);
 		return;
 	}
 
@@ -151,7 +153,7 @@ function main()
 	  };
 	}
 
-	//Le a tabela das disciplinas para a memoria
+	//Acessa a tabela dos horários
 	var table = document.getElementsByClassName("modelo1")[1]
 
 	//Para cada disciplina (linha 0 é o 'header', então começa na 1)
@@ -165,17 +167,17 @@ function main()
 		//4 : Progessor(es)
 		
 		//Le o nome da disciplina
-		nome_aula = table.rows[i].cells[1].innerText.trim()
+		nome_aula = table.rows[i].cells[1].textContent.trim()
 		if (!nome_aula)
 			nome_aula = "Não especificado"
 			
 		//Le a turma
-		codigo_aula = table.rows[i].cells[2].innerText.trim()
+		codigo_aula = table.rows[i].cells[2].textContent.trim()
 		if (!codigo_aula)
 			codigo_aula = "Não especificado"
 		
 		//Le o(s) professor(es) (pode ser mais de um, mas sao uma unica string com \n após cada prof)
-		prof_aula = table.rows[i].cells[4].innerText.trim()
+		prof_aula = table.rows[i].cells[4].textContent.trim()
 		if (!prof_aula)
 			prof_aula = "Não especificado"
 		
@@ -185,7 +187,7 @@ function main()
 		//Algumas disciplinas tem um campo extra: "Observação", que quando existe, é o ultimo elemento na coluna Horario - Local
 		//Se existir esse campo, lê ele e decrementa o childrenLen para evitar que ele seja lido como um horario
 		var childElementCount = table.rows[i].cells[3].childElementCount
-		var lastChildInnerText = table.rows[i].cells[3].children[childElementCount - 1].innerText
+		var lastChildInnerText = table.rows[i].cells[3].children[childElementCount - 1].textContent
 		if (lastChildInnerText.startsWith("Observação"))
 		{
 			descricao_aula = lastChildInnerText
@@ -222,7 +224,7 @@ function main()
 			//Le local caso esteja especificado
 			if (item.childElementCount > 0)
 			{
-				lugar_aula = item.childNodes[1].innerText.trim()
+				lugar_aula = item.childNodes[1].textContent.trim()
 			}
 			else
 			{
