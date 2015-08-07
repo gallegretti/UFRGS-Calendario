@@ -1,12 +1,16 @@
 ﻿/*
 * Gabriel Allegretti - 2015
 * Cria um arquivo com os horários das cadeiras da UFRGS no formato ICalendar, que então pode
-* ser importado em diversos calendários. Ver https://en.wikipedia.org/wiki/List_of_applications_with_iCalendar_support
+* ser importado em diversos aplicativos de calendário. Ver https://en.wikipedia.org/wiki/List_of_applications_with_iCalendar_support
 * Utiliza a versão 2.0 do ICalendar, RFC 5545 http://tools.ietf.org/search/rfc5545
-* Para utilizar, acesse o site da ufrgs e entre em serviços, então navegue para Informacoes do Aluno -> Atividades Correntes, abra o
-* console para executar javascript e rode esse código
+* Configurado para o semestre 2015/2
+* Para utilizar, acesse o site da ufrgs e faça login. Então navegue para informações do aluno -> atividades correntes (ou acesse https://www1.ufrgs.br/intranet/portal/public/index.php?cods=1,1,2,9)
+* Navegadores testados:
+*	-Google Chrome: Sem problemas
+*	-Firefox:		Não funciona (innerText não suportado)
+* Abra o console para executar javascript e rode esse código. O calendário será salvo pelo seu navegador.
 * 	-Calendários testados:
-* Google Calendar: 	-Problemas na encodificação (palavras com acento não aparecem corretamente)
+* Google Calendar: 	Problemas na encodificação após importar(palavras com acento não aparecem corretamente)
 * Outlook Calendar: Sem problemas
 */
 
@@ -61,8 +65,13 @@ var indice_dias = {
 "SU" : 6
 }
 
-//Le o horario da aula de uma string para as variaveis globais. Ex:
-//LeHorario("Quinta - 8:30-9:20 (2)")
+//Le o horario da aula de uma string para as variaveis globais. 
+//Exemplo:
+//LeHorario("Quinta - 08:30-09:20 (2)")
+//[0] - "Quinta"    - dia que ocorre
+//[1] - "-"			-
+//[2] - "08:30-09:20" - horário que ocorre
+//[3] - "(2)" 		- quantos períodos dura (50 min cada)
 //inicio_aula e fim_aula ficaram no formato 'hhmm'
 //dia_aula ficana de acordo com o dicionario_dias
 //Retorna true se o horario é valido, falso se não é
@@ -99,142 +108,154 @@ function LeHorario(linha)
 	return true
 }
 
-//Adiciona o header do calendario
-var Calendario = "BEGIN:VCALENDAR\n"
-	Calendario += "VERSION:2.0\n"
-	
-//Cria o evento usando as variaveis globais
-function EscreveEvento()
+function main()
 {
-	Calendario += "BEGIN:VEVENT\n"
-	// DTSTART deve ser a primeira vez que o evento ocorre apos o inicio do semestre
-	// Se não for sincronizado, é undefined behaviour :( -> http://tools.ietf.org/search/rfc5545#page-167 (A.1 - 1)
-	// Uma solução mais robusta precisaria de uma biblioteca, como a Datejs
-	// Mas o semestre começa em uma segunda-feira:
-	var primeiraAula = Number(inicio_semestre)
-	primeiraAula += indice_dias[dia_aula] 
-	Calendario += "DTSTART:" + primeiraAula + "T" + inicio_aula + "00\n"// Inicio da aula
-	Calendario += "DTEND:" + primeiraAula + "T" + fim_aula + "00\n"	   // Fim da aula
-	Calendario += "RRULE:FREQ=WEEKLY;BYDAY=" + dia_aula + ";" + "UNTIL=" + fim_semestre + "\n"	 // Quando ocorr a aula		
-	Calendario += "LOCATION:" + lugar_aula + "\n"  // Onde vai ser a aula
-	Calendario += "CATEGORIES:Aula\n" 			   // Categoria do evento
-	Calendario += "SUMMARY:" + nome_aula + "\n"    // Nome da disciplina (nome do evento no calendario)
-	Calendario += "DESCRIPTION:"
-	if (descricao_aula != "")
-		Calendario += "Observações: " + descricao_aula + "; "
-	Calendario += "Turma:" + codigo_aula + "; Professor(a):" + prof_aula + "\n" //Sobre a aula
-	Calendario += "END:VEVENT\n"
-}
-
-//http://stackoverflow.com/questions/646628/how-to-check-if-a-string-startswith-another-string
-if (typeof String.prototype.startsWith != 'function') {
-  String.prototype.startsWith = function (str){
-    return this.indexOf(str) === 0;
-  };
-}
-
-//Le a tabela das disciplinas para a memoria
-var table = document.getElementsByClassName("modelo1")[1]
-
-//Para cada disciplina (linha 0 é o 'header', então começa na 1)
-for (var i = 1; i < table.rows.length; i++)
-{
-	//Colunas/cells:
-	//0 : Icone da impressora - irrelevante
-	//1 : Nome da disciplina
-	//2 : Codigo da turma
-	//3 : Horario - local
-	//4 : Progessor(es)
 	
-	//Le o nome da disciplina
-	nome_aula = table.rows[i].cells[1].innerText.trim()
-	if (!nome_aula)
-		nome_aula = "Não especificado"
+	if (location.toString() != "https://www1.ufrgs.br/intranet/portal/public/index.php?cods=1,1,2,9")
+	{
+		alert("Página errada")
+		return;
+	}
+
+	//Adiciona o header do calendario
+	var Calendario = "BEGIN:VCALENDAR\n"
+		Calendario += "VERSION:2.0\n"
 		
-	//Le a turma
-	codigo_aula = table.rows[i].cells[2].innerText.trim()
-	if (!codigo_aula)
-		codigo_aula = "Não especificado"
-	
-	//Le o(s) professor(es) (pode ser mais de um, mas sao uma unica string com \n após cada prof)
-	prof_aula = table.rows[i].cells[4].innerText.trim()
-	if (!prof_aula)
-		prof_aula = "Não especificado"
-	
-	if (debug == 1)
-		var alertString = "Disciplina:" + nome_aula + "\n" + "Turma:" + codigo_aula + "\n\n"
-	
-	
-	//Algumas disciplinas tem um campo extra: "Observação", que quando existe, é o ultimo elemento na coluna Horario - Local
-	//Se existir esse campo, lê ele e decrementa o childrenLen para evitar que ele seja lido como um horario
-	var childElementCount = table.rows[i].cells[3].childElementCount
-	var lastChildInnerText = table.rows[i].cells[3].children[childElementCount - 1].innerText
-	if (lastChildInnerText.startsWith("Observação"))
+	//Cria o evento usando as variaveis globais
+	function EscreveEvento()
 	{
-		descricao_aula = lastChildInnerText
-		childElementCount--
+		Calendario += "BEGIN:VEVENT\n"
+		// DTSTART deve ser a primeira vez que o evento ocorre apos o inicio do semestre
+		// Se não for sincronizado, é undefined behaviour :( -> http://tools.ietf.org/search/rfc5545#page-167 (A.1 - 1)
+		// Uma solução mais robusta precisaria de uma biblioteca, como a Datejs
+		// Essa solução não ideal assume que o semestre começa em uma segunda-feira e no inicio do mes (se o dia após a soma nao existir, é undefined behaviour):
+		var primeiraAula = Number(inicio_semestre)
+		primeiraAula += indice_dias[dia_aula] 
+		Calendario += "DTSTART:" + primeiraAula + "T" + inicio_aula + "00\n"// Inicio da aula
+		Calendario += "DTEND:" + primeiraAula + "T" + fim_aula + "00\n"	   // Fim da aula
+		Calendario += "RRULE:FREQ=WEEKLY;BYDAY=" + dia_aula + ";" + "UNTIL=" + fim_semestre + "\n"	 // Regra para repetir o evento no dia certo até acabar o semestre	
+		Calendario += "LOCATION:" + lugar_aula + "\n"  // Onde vai ser a aula
+		Calendario += "CATEGORIES:Aula\n" 			   // Categoria do evento
+		Calendario += "SUMMARY:" + nome_aula + "\n"    // Nome da disciplina (nome do evento no calendario)
+		Calendario += "DESCRIPTION:"
+		if (descricao_aula != "") //descricao_aula já começa com "Observação:"
+			Calendario += descricao_aula + "; "
+		Calendario += "Turma:" + codigo_aula + "; Professor(a):" + prof_aula + "\n" //Sobre a aula
+		Calendario += "END:VEVENT\n"
 	}
-	//Se nao houver uma descricao, limpa a string
-	else
-	{
-		descricao_aula = ""
+
+	//http://stackoverflow.com/questions/646628/how-to-check-if-a-string-startswith-another-string
+	if (typeof String.prototype.startsWith != 'function') {
+	  String.prototype.startsWith = function (str){
+		return this.indexOf(str) === 0;
+	  };
 	}
-	//Para item no bloco de horários
-	for (var j = 0; j < childElementCount; j++)
+
+	//Le a tabela das disciplinas para a memoria
+	var table = document.getElementsByClassName("modelo1")[1]
+
+	//Para cada disciplina (linha 0 é o 'header', então começa na 1)
+	for (var i = 1; i < table.rows.length; i++)
 	{
-		var item = table.rows[i].cells[3].children[j]
+		//Colunas/cells:
+		//0 : Icone da impressora - irrelevante
+		//1 : Nome da disciplina
+		//2 : Codigo da turma
+		//3 : Horario - local
+		//4 : Progessor(es)
+		
+		//Le o nome da disciplina
+		nome_aula = table.rows[i].cells[1].innerText.trim()
+		if (!nome_aula)
+			nome_aula = "Não especificado"
 			
-		//Le horario caso esteja especificado
-		if (item.childElementCount > 0)
+		//Le a turma
+		codigo_aula = table.rows[i].cells[2].innerText.trim()
+		if (!codigo_aula)
+			codigo_aula = "Não especificado"
+		
+		//Le o(s) professor(es) (pode ser mais de um, mas sao uma unica string com \n após cada prof)
+		prof_aula = table.rows[i].cells[4].innerText.trim()
+		if (!prof_aula)
+			prof_aula = "Não especificado"
+		
+		if (debug == 1)
+			var alertString = "Disciplina:" + nome_aula + "\n" + "Turma:" + codigo_aula + "\n\n"
+		
+		//Algumas disciplinas tem um campo extra: "Observação", que quando existe, é o ultimo elemento na coluna Horario - Local
+		//Se existir esse campo, lê ele e decrementa o childrenLen para evitar que ele seja lido como um horario
+		var childElementCount = table.rows[i].cells[3].childElementCount
+		var lastChildInnerText = table.rows[i].cells[3].children[childElementCount - 1].innerText
+		if (lastChildInnerText.startsWith("Observação"))
 		{
-			var dia_horario = item.childNodes[0].wholeText
+			descricao_aula = lastChildInnerText
+			childElementCount--
 		}
+		//Se nao houver uma descricao, limpa a string
 		else
 		{
-			console.log("Aviso: \"" + nome_aula + "\" nao tem horário definido para o dia " + dia_aula)
-			continue
+			descricao_aula = ""
 		}
-		
-		var dia_hora = dia_horario.slice(0, dia_horario.indexOf("&"))
-		var resultado = LeHorario(dia_hora)
-		if (resultado == false)
+		//Para item no bloco de horários
+		for (var j = 0; j < childElementCount; j++)
 		{
-			console.log("Aviso: \"" + nome_aula + "\" pode não ter tido um horário lido com sucesso")
+			var item = table.rows[i].cells[3].children[j]
+				
+			//Le horario caso esteja especificado
+			if (item.childElementCount > 0)
+			{
+				var dia_horario = item.childNodes[0].wholeText
+			}
+			else
+			{
+				console.log("Aviso: \"" + nome_aula + "\" nao tem horário definido para o dia " + dia_aula)
 				continue
+			}
+			
+			var resultado = LeHorario(dia_horario.slice(0, dia_horario.indexOf("&")))
+			if (resultado == false)
+			{
+				console.log("Aviso: \"" + nome_aula + "\" pode não ter tido um horário lido com sucesso")
+					continue
+			}
+			
+			//Le local caso esteja especificado
+			if (item.childElementCount > 0)
+			{
+				lugar_aula = item.childNodes[1].innerText.trim()
+			}
+			else
+			{
+				lugar_aula = "Não especificado"
+			}
+			
+			//Cria o evento no calendario
+			EscreveEvento()
 		}
-		
-		//Le local caso esteja especificado
-		if (item.childElementCount > 0)
+
+		if (debug == 1)
 		{
-			lugar_aula = item.childNodes[1].innerText.trim()
+			alertString += "Dia:" + dia_aula + " - " + "Inicio:" + inicio_aula + " Fim:" + fim_aula + "\n" + "Lugar:" + lugar_aula + "\n\n"	
+			alert(alertString)
 		}
-		else
-		{
-			lugar_aula = "Não especificado"
-		}
-		
-		//Cria o evento no calendario
-		EscreveEvento()
 	}
 
-	if (debug == 1)
-	{
-		alertString += "Dia:" + dia_aula + " - " + "Inicio:" + inicio_aula + " Fim:" + fim_aula + "\n" + "Lugar:" + lugar_aula + "\n\n"	
-		alert(alertString)
-	}
+	Calendario += "END:VCALENDAR\n"
+
+	// Faz o download do calendario
+	var file = window.document.createElement('a');
+	//file.href = window.URL.createObjectURL(new Blob([Calendario], {type: 'text/plain;charset=UTF-8', encoding: 'UTF-8'}));
+	file.href = window.URL.createObjectURL(new Blob([Calendario], {type: 'text/calendar;charset=UTF-8'}));
+	file.download = fileName + ".ics";
+
+	// Append anchor to body.
+	document.body.appendChild(file)
+	file.click();
+
+	// Remove anchor from body
+	document.body.removeChild(file)
+	
 }
 
-Calendario += "END:VCALENDAR\n"
+main()
 
-// Faz o download do calendario
-var file = window.document.createElement('a');
-//file.href = window.URL.createObjectURL(new Blob([Calendario], {type: 'text/plain;charset=UTF-8', encoding: 'UTF-8'}));
-file.href = window.URL.createObjectURL(new Blob([Calendario], {type: 'text/calendar;charset=UTF-8'}));
-file.download = fileName + ".ics";
-
-// Append anchor to body.
-document.body.appendChild(file)
-file.click();
-
-// Remove anchor from body
-document.body.removeChild(file)
