@@ -20,8 +20,8 @@ var fileName = "Calendario"
 // Assume-se que o inicio do semestre é em uma segunda-feira
 // Uma solução mais robusta precisaria de uma biblioteca, como a Datejs
 // Datas sobre o semestre, formato aaaammdd
-var inicio_semestre = "20150803" // 03/08/2015
-var fim_semestre = "20151219"	 // 19/12/2015
+var inicio_semestre = "03/08/2015"
+var fim_semestre = "19/12/2015"	
 var site_matricula = "https://www1.ufrgs.br/intranet/portal/public/index.php?cods=1,1,2,9"
 var debug = 0
 
@@ -43,6 +43,14 @@ var dia_aula
 var inicio_aula
 // O horario do fim da aula (formato: hhmmss)
 var fim_aula
+
+// Adiciona a funcao startsWith() para strings
+// http://stackoverflow.com/questions/646628/how-to-check-if-a-string-startswith-another-string
+if (typeof String.prototype.startsWith != 'function') {
+	 String.prototype.startsWith = function (str){
+	return this.indexOf(str) === 0;
+  };
+}
 
 // Converte dias da semana para abreviação usada pelo iCal
 var dicionario_dias = {
@@ -109,19 +117,31 @@ function LeHorario(linha)
 	return true
 }
 
+//Le uma data e retorna uma string no formato do iCal
+//Ex: LeData("03/08/2015") -> "20150803"
+//Se nao for uma data bem definida, retorna undefined
+function LeData(linha)
+{
+	if (typeof linha != "string" || linha.length != 10)
+		return undefined
+	
+	linha = linha.replace('/','')
+	linha = linha.replace('/','')
+	
+	if (linha.length != 8)
+		return undefined
+	
+	var dataIcal = linha.slice(4,9)
+	dataIcal += linha.slice(2,4)
+	dataIcal += linha.slice(0,2)
+	
+	return dataIcal
+}
+
+
+
 function main()
 {
-	// Garante que está no site certo
-	if (location.toString() != site_matricula)
-	{
-		alert("Redirecionando para a página certa")
-		window.location.replace(site_matricula)
-		return
-	}
-
-	// Adiciona o header do calendario
-	var Calendario = "BEGIN:VCALENDAR\nVERSION:2.0\n"
-					 
 	// Cria o evento usando as variaveis globais
 	function EscreveEvento()
 	{
@@ -142,23 +162,37 @@ function main()
 		// Se a disciplina tinha uma Observação
 		if (descricao_aula != "") 				
 			Calendario += descricao_aula + "; " // Descricao_aula já começa com "Observação:"
-		Calendario += "Turma:" + codigo_aula + "; Professor(a):" + prof_aula + "\n" // Turma e professor
-		Calendario += "END:VEVENT\n"
+		Calendario += "Turma:" + codigo_aula + "; Professor(a):" + prof_aula + "\n" + // Turma e professor
+					  "END:VEVENT\n"
 	}
-
-	//http://stackoverflow.com/questions/646628/how-to-check-if-a-string-startswith-another-string
-	if (typeof String.prototype.startsWith != 'function') {
-	  String.prototype.startsWith = function (str){
-		return this.indexOf(str) === 0;
-	  };
+		
+	// Garante que está no site certo
+	if (location.toString() != site_matricula)
+	{
+		alert("Redirecionando para a página certa")
+		window.location.replace(site_matricula)
+		return
 	}
+	
+	// Converte as datas
+	inicio_semestre = LeData(inicio_semestre)
+	fim_semestre = LeData(fim_semestre)
 
+	// Adiciona o header do calendario
+	var Calendario = "BEGIN:VCALENDAR\nVERSION:2.0\n"
+					 
 	// Acessa a tabela dos horários
 	var table = document.getElementsByClassName("modelo1")[1]
+	if (table == 'undefined')
+	{
+		alert("Erro ao ler os horarios")
+		return
+	}
 
 	// Para cada disciplina (linha 0 é o 'header', então começa na 1)
 	for (var i = 1; i < table.rows.length; i++)
 	{
+		var currentRow = table.rows[i]
 		//Colunas/cells:
 		//0 : Icone da impressora - irrelevante
 		//1 : Nome da disciplina
@@ -167,17 +201,23 @@ function main()
 		//4 : Progessor(es)
 		
 		// Le o nome da disciplina
-		nome_aula = table.rows[i].cells[1].textContent.trim()
+		nome_aula = currentRow.cells[1].textContent.trim()
 		if (!nome_aula)
 			nome_aula = "Não especificado"
 			
 		// Le a turma
-		codigo_aula = table.rows[i].cells[2].textContent.trim()
+		codigo_aula = currentRow.cells[2].textContent.trim()
 		if (!codigo_aula)
 			codigo_aula = "Não especificado"
 		
-		// Le o(s) professor(es) (pode ser mais de um, mas sao uma unica string com \n após cada prof)
-		prof_aula = table.rows[i].cells[4].textContent.trim()
+		// Le o(s) professor(es) (pode ser mais de um, cada um sendo um child)
+		prof_aula = ""
+		for (var k = 1; k < currentRow.cells[4].childElementCount; k++)
+		{
+			if (k > 1)
+				prof_aula += "; "
+			prof_aula += currentRow.cells[4].children[k].textContent.trim()
+		}
 		if (!prof_aula)
 			prof_aula = "Não especificado"
 		
@@ -186,8 +226,8 @@ function main()
 		
 		// Algumas disciplinas tem um campo extra: "Observação", que quando existe, é o ultimo elemento na coluna Horario - Local
 		// Se existir esse campo, lê ele e decrementa o childrenLen para evitar que ele seja lido como um horario
-		var childElementCount = table.rows[i].cells[3].childElementCount
-		var lastChildInnerText = table.rows[i].cells[3].children[childElementCount - 1].textContent
+		var childElementCount = currentRow.cells[3].childElementCount
+		var lastChildInnerText = currentRow.cells[3].children[childElementCount - 1].textContent
 		if (lastChildInnerText.startsWith("Observação"))
 		{
 			descricao_aula = lastChildInnerText
@@ -202,7 +242,7 @@ function main()
 		for (var j = 0; j < childElementCount; j++)
 		{
 			// Acessa o item j
-			var item = table.rows[i].cells[3].children[j]
+			var item = currentRow.cells[3].children[j]
 				
 			// Le horario caso esteja especificado
 			if (item.childElementCount > 0)
