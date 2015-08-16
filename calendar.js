@@ -183,7 +183,7 @@ function main()
 					 
 	// Acessa a tabela dos horários
 	var table = document.getElementsByClassName("modelo1")[1]
-	if (table == 'undefined')
+	if (table === undefined)
 	{
 		alert("Erro ao ler os horarios")
 		return
