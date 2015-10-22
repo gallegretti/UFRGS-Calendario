@@ -1,49 +1,42 @@
-﻿/*
-* Gabriel Allegretti - 2015
-* Cria um arquivo com os horários das cadeiras da UFRGS no formato ICalendar, que então pode
-* ser importado em diversos aplicativos de calendário. Ver https://en.wikipedia.org/wiki/List_of_applications_with_iCalendar_support
-* Utiliza a versão 2.0 do ICalendar, RFC 5545 http://tools.ietf.org/search/rfc5545
-* Configurado para o semestre 2015/2
-* Para utilizar, acesse o site da ufrgs e faça login. Então navegue para informações do aluno -> atividades correntes (ou acesse https://www1.ufrgs.br/intranet/portal/public/index.php?cods=1,1,2,9)
-* Navegadores testados:
-*	-Google Chrome: Sem problemas (ctrl + shift + j)
-*	-Firefox:		Sem problemas (ctrl + shift + k), permitir javascript manualmente
-* Abra o console para executar javascript e rode esse código. O calendário será salvo pelo seu navegador.
-* 	-Calendários testados:
-* Google Calendar: 	Problemas na encodificação após importar(palavras com acento não aparecem corretamente)
-* Outlook Calendar: Sem problemas
-*/
+﻿// ==UserScript==
+// @name         UFRGS Calendar
+// @version      1.0
+// @description  Generate a file with current activities that the student is attending in UFRGS that can be imported in many calendar apps.
+// @author       Gabriel Allegretti
+// @source		 https://github.com/gallegretti/UFRGS-Calendario
+// @include      https://www1.ufrgs.br/intranet/portal/public/index.php?cods=1,1,2,9
+// @grant        none
+// ==/UserScript==
 
-// O nome do arquivo que será gerado
-var fileName = "Calendario"
+// Script is intended be used with Tampermonkey, but copy-pasting the code into the javascript console in your browser and then excecuting will work
+// Script best visualized with Notepad++
+// Calendar format: ICalendar 2.0 , RFC 5545 http://tools.ietf.org/search/rfc5545
+// TODO: Test in browsers other than google chrome
+// TODO: Move code to class?
+// TODO: Use consistent naming for variables and functions
 
-// Assume-se que o inicio do semestre é em uma segunda-feira
-// Uma solução mais robusta precisaria de uma biblioteca, como a Datejs
-// Datas sobre o semestre, formato aaaammdd
-var inicio_semestre = "03/08/2015"
-var fim_semestre = "19/12/2015"	
-var site_matricula = "https://www1.ufrgs.br/intranet/portal/public/index.php?cods=1,1,2,9"
-var debug = 0
+//Variáveis customizaveis
+var inicio_semestre = "03/08/2015", // (dd/mm/aaaa)
+	fim_semestre = "19/12/2015", // (dd/mm/aaaa)
+	com_semana_academica = true, // Se deve adicionar o evento da semana acadêmica ao calendario
+	inicio_semana_academica = "19/10/2015", // Data do inicio da semana acadêmica
+	// Se o último dia do evento é 23/10/2015, deve-se usar o dia seguinte desse
+	fim_semana_academica = "24/10/2015",    // Data do fim da semana acadêmica
 
-// Nome da disciplina
-var nome_aula 
-// Qual a turma
-var codigo_aula
-// Descricao da aula
-var descricao_aula
-// Nome do professor da disciplina
-var prof_aula
-// Nem sempre ocorre (formato: "Observação: *")
-var observacoes_aula
-// Onde é a aula
-var lugar_aula
-// Quais os dias que tem essa aula (usar o dicionario_dias separado com virgulas)
-var dia_aula
-// O horario de inicio da aula (formato: hhmmss)
-var inicio_aula
-// O horario do fim da aula (formato: hhmmss)
-var fim_aula
-
+// Variáveis internas globais
+	nome_aula, 
+	codigo_aula,
+	descricao_aula,
+	prof_aula,
+	observacoes_aula,
+	lugar_aula,
+	dia_aula, // (usar o dicionario_dias, separado com virgulas cada ocorrência)
+	inicio_aula, // (formato: hhmmss)
+	fim_aula; // (formato: hhmmss)
+	
+// Adiciona o header do calendario
+	var Calendario = "BEGIN:VCALENDAR\nVERSION:2.0\n"
+	
 // Adiciona a funcao startsWith() para strings
 // http://stackoverflow.com/questions/646628/how-to-check-if-a-string-startswith-another-string
 if (typeof String.prototype.startsWith != 'function') {
@@ -74,13 +67,24 @@ var indice_dias = {
 "SU" : 6
 }
 
-//Le o horario da aula de uma string para as variaveis globais. 
-//Exemplo:
-//LeHorario("Quinta - 08:30-09:20 (2)")
-//[0] - "Quinta"    - dia que ocorre
-//[1] - "-"			-
-//[2] - "08:30-09:20" - horário que ocorre
-//[3] - "(2)" 		- quantos períodos dura (50 min cada)
+// Cria um evento no calendario com a semana academica
+function EventoSemanaAcademica()
+{
+	var inicio_evento = LeData(inicio_semana_academica)
+	var fim_evento = LeData(fim_semana_academica)
+	if ((inicio_evento === undefined) || (fim_evento === undefined))
+	{
+		alert("Não foi possivel criar o evento da semana acadêmica pois as datas são inválidas")
+		return
+	}
+	Calendario += "BEGIN:VEVENT\n" + 
+				  "DTSTART;VALUE=DATE:" + inicio_evento + "\n" +
+				  "DTEND;VALUE=DATE:" + fim_evento + "\n" +
+				  "SUMMARY:Semana Acadêmica\n" +
+				  "END:VEVENT\n"
+}
+
+//Le o horario da aula de uma string para as variaveis globais. Ex: LeHorario("Quinta - 08:30-09:20 (2)")
 //inicio_aula e fim_aula ficaram no formato 'hhmm'
 //dia_aula ficana de acordo com o dicionario_dias
 //Retorna true se o horario é valido, falso se não é
@@ -118,6 +122,7 @@ function LeHorario(linha)
 }
 
 //Le uma data e retorna uma string no formato do iCal
+// dd/mm/aaaa -> aaaammdd
 //Ex: LeData("03/08/2015") -> "20150803"
 //Se nao for uma data bem definida, retorna undefined
 function LeData(linha)
@@ -138,9 +143,8 @@ function LeData(linha)
 	return dataIcal
 }
 
-
-
-function main()
+//Cria o calendário e faz seu download pelo browser
+function generateCalendar()
 {
 	// Cria o evento usando as variaveis globais
 	function EscreveEvento()
@@ -159,28 +163,17 @@ function main()
 					  "CATEGORIES:Aula\n" +			  						   // Categoria do evento
 					  "SUMMARY:" + nome_aula + "\n" +  						   // Nome da disciplina (nome do evento no calendario)
 					  "DESCRIPTION:"										   // Descrição do evento
-		// Se a disciplina tinha uma Observação
+		// Se a disciplina tinha uma Observação explícita, vai para a descrição
 		if (descricao_aula != "") 				
 			Calendario += descricao_aula + "; " // Descricao_aula já começa com "Observação:"
 		Calendario += "Turma:" + codigo_aula + "; Professor(a):" + prof_aula + "\n" + // Turma e professor
 					  "END:VEVENT\n"
 	}
 		
-	// Garante que está no site certo
-	if (location.toString() != site_matricula)
-	{
-		alert("Redirecionando para a página certa")
-		window.location.replace(site_matricula)
-		return
-	}
-	
 	// Converte as datas
 	inicio_semestre = LeData(inicio_semestre)
 	fim_semestre = LeData(fim_semestre)
-
-	// Adiciona o header do calendario
-	var Calendario = "BEGIN:VCALENDAR\nVERSION:2.0\n"
-					 
+	
 	// Acessa a tabela dos horários
 	var table = document.getElementsByClassName("modelo1")[1]
 	if (table === undefined)
@@ -198,7 +191,7 @@ function main()
 		//1 : Nome da disciplina
 		//2 : Codigo da turma
 		//3 : Horario - local
-		//4 : Progessor(es)
+		//4 : Professor(es)
 		
 		// Le o nome da disciplina
 		nome_aula = currentRow.cells[1].textContent.trim()
@@ -210,8 +203,8 @@ function main()
 		if (!codigo_aula)
 			codigo_aula = "Não especificado"
 		
-		// Le o(s) professor(es) (pode ser mais de um, cada um sendo um child)
 		prof_aula = ""
+		// Para cada professor (pode ser mais de um, cada um sendo um child)
 		for (var k = 1; k < currentRow.cells[4].childElementCount; k++)
 		{
 			if (k > 1)
@@ -220,9 +213,6 @@ function main()
 		}
 		if (!prof_aula)
 			prof_aula = "Não especificado"
-		
-		if (debug == 1)
-			var alertString = "Disciplina:" + nome_aula + "\n" + "Turma:" + codigo_aula + "\n\n"
 		
 		// Algumas disciplinas tem um campo extra: "Observação", que quando existe, é o ultimo elemento na coluna Horario - Local
 		// Se existir esse campo, lê ele e decrementa o childrenLen para evitar que ele seja lido como um horario
@@ -276,20 +266,17 @@ function main()
 			// Cria o evento no calendario
 			EscreveEvento()
 		}
-
-		if (debug == 1)
-		{
-			alertString += "Dia:" + dia_aula + " - " + "Inicio:" + inicio_aula + " Fim:" + fim_aula + "\n" + "Lugar:" + lugar_aula + "\n\n"	
-			alert(alertString)
-		}
 	}
+	
+	if (com_semana_academica)
+		EventoSemanaAcademica()
 
 	Calendario += "END:VCALENDAR\n"
 
 	// Cria o arquivo do calendario
 	var file = window.document.createElement('a');
 	file.href = window.URL.createObjectURL(new Blob([Calendario], {type: 'text/calendar;charset=UTF-8'}));
-	file.download = fileName + ".ics";
+	file.download = "calendar.ics";
 	
 	// Faz o download do calendario
 	document.body.appendChild(file)
@@ -298,5 +285,31 @@ function main()
 	
 }
 
-main()
-
+// Cria um botão na página, que ao ser clicado, faz o downlaod do calendário
+function addButton()
+{
+	// O botão será inserido dentro de um 'div' e de um 'form', igual ao botão 'Imprimir'
+	var principal = document.createElement("div")
+	principal.className = "bt_calendario"
+	var form = document.createElement("form")
+	principal.appendChild(form)
+	
+	// Cria o botão de gerar o calendário
+	var button = document.createElement("input")
+	form.appendChild(button)
+	button.className = "button"
+	button.type = "button"
+	button.id = "botaoCalendario"
+	button.onclick = generateCalendar
+	button.value = "Gerar calendario"
+	
+	// O botão de 'Imprimir' usa posição absoluta, então usa tambem para ficar do lado dele
+	button.style.position = "absolute"
+	button.style.right =  "150px"
+	button.style.top = "145px"
+	
+	// Insere antes do botão 'Imprimir'
+	var element = document.getElementById("conteudo")
+	element.insertBefore(principal,element.firstChild)
+}
+addButton()
