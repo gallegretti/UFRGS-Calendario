@@ -8,8 +8,8 @@
 // @grant        none
 // ==/UserScript==
 
-// Script is intended be used with Tampermonkey, but copy-pasting the code into the javascript console in your browser and then excecuting will work
-// Script best visualized with Notepad++
+// This script is intended be used with Tampermonkey, but copy-pasting the code into the javascript console in your browser and then excecuting will work
+// Best visualized with Notepad++
 // Calendar file format: ICalendar 2.0 , RFC 5545 http://tools.ietf.org/search/rfc5545
 
 /**
@@ -160,15 +160,14 @@ return((r[1].length===0)?r[0]:null);};};$D.parseExact=function(s,fx){return $D.g
 
 
 //Variáveis customizaveis
-var inicio_semestre = "03/08/2015", // (dd/mm/aaaa) Data do inicio do semestre 2016/1 = "29/02/2016"
-	fim_semestre = "19/12/2015", // (dd/mm/aaaa) Data do fim do semestre 2016/1 = "09/07/2016"
+var inicio_semestre = "29/02/2016", // (dd/mm/aaaa) Data do inicio do semestre
+	fim_semestre = "09/07/2016", // (dd/mm/aaaa) Data do fim do semestre
 	com_semana_academica = false, // Se deve adicionar o evento da semana acadêmica ao calendario
-	inicio_semana_academica = "19/10/2015", // (dd/mm/aaaa) Data do inicio da semana acadêmica 2016 = 17/10/2016
-	// Se o último dia do evento é 23/10/2015, deve-se usar o dia seguinte desse
-	fim_semana_academica = "24/10/2015"    // (dd/mm/aaaa) Data do fim da semana acadêmica  2016 = 22/10/2016
+	inicio_semana_academica = "12/09/2016", // (dd/mm/aaaa) Data do inicio da semana acadêmica
+	fim_semana_academica = "17/09/2016"    // (dd/mm/aaaa) Data do fim da semana acadêmica. Usar o dia seguinte do último dia de programações
 
-	// Adiciona o header do calendario
-	var Calendario = "BEGIN:VCALENDAR\nVERSION:2.0\n"
+// Adiciona o header do calendario
+var Calendario = "BEGIN:VCALENDAR\nVERSION:2.0\n"
 	
 // Adiciona a funcao startsWith() para strings
 // http://stackoverflow.com/questions/646628/how-to-check-if-a-string-startswith-another-string
@@ -199,7 +198,6 @@ var indice_dias = {
 "SA" : 5,
 "SU" : 6
 }
-
 
 // Cria um evento no calendario com a semana academica
 function EventoSemanaAcademica()
@@ -351,7 +349,7 @@ function generateCalendar()
 		// Algumas disciplinas tem um campo extra: "Observação", que quando existe, é o ultimo elemento na coluna Horario - Local
 		// Se existir esse campo, lê ele para a descrição do evento e decrementa o childrenLen para evitar que ele seja lido como um horario
 		var childElementCount = currentRow.cells[3].childElementCount
-		var lastChildInnerText = currentRow.cells[3].children[childElementCount - 1].textContent
+		var lastChildInnerText = currentRow.cells[3].children[childElementCount - 1].textContent.trim()
 		if (lastChildInnerText.startsWith("Observação"))
 		{
 			event.descricao_aula = lastChildInnerText
