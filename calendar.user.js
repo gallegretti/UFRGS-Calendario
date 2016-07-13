@@ -159,7 +159,7 @@ return((r[1].length===0)?r[0]:null);};$D.getParseFunction=function(fx){var fn=$D
 return((r[1].length===0)?r[0]:null);};};$D.parseExact=function(s,fx){return $D.getParseFunction(fx)(s);};}());
 
 
-//Variáveis customizaveis
+// Variáveis customizaveis
 var inicio_semestre = "01/08/2016", // (dd/mm/aaaa) Data do inicio do semestre
 	fim_semestre = "21/12/2016", // (dd/mm/aaaa) Data do fim do semestre
 	com_semana_academica = true, // Se deve adicionar o evento da semana acadêmica ao calendario
@@ -199,19 +199,23 @@ var indice_dias = {
 	"SU" : 6
 }
 
-// Cria um evento no calendario com a semana academica
+// Cria o evento da semana acadêmica no calendário
 function EventoSemanaAcademica()
 {
-	var inicio_evento = readDate(inicio_semana_academica)
-	var fim_evento = readDate(fim_semana_academica)
-	if ((inicio_evento === undefined) || (fim_evento === undefined))
+	try
+	{
+		var inicio_evento = iCalDateFormat(inicio_semana_academica)
+		var fim_evento =  iCalDateFormat(fim_semana_academica)
+	}
+	catch(err)
 	{
 		alert("Aviso: Não foi possivel criar o evento da semana acadêmica pois as datas são inválidas")
 		return
 	}
+	
 	Calendario += "BEGIN:VEVENT\n" + 
 				  "DTSTART;VALUE=DATE:" + inicio_evento + "\n" +
-				  "DTEND;VALUE=DATE:" + fim_evento + "\n" +
+				  "DTEND;VALUE=DATE:"   + fim_evento    + "\n" +
 				  "SUMMARY:Semana Acadêmica da UFRGS\n" +
 				  "END:VEVENT\n"
 }
@@ -226,21 +230,19 @@ function getDesc(string)
 }
 
 
-//Le uma data e retorna uma string no formato do iCal
-// dd/mm/aaaa -> aaaammdd
-//Ex: readDate("03/08/2015") -> "20150803"
-//Se nao for uma data bem definida, retorna undefined
-function readDate(linha)
+// Lê uma string no formato dd/mm/aaaa e retorna uma string no formato do iCal
+// Ex: "03/08/2015" -> "20150803"
+function iCalDateFormat(linha)
 {
 	var date = Date.parse(linha); 
 	if (date == null) {
-		return undefined;
+		throw "Data inválida";
 	}
 
 	return date.toString("yyyymmdd");
 }
 
-//Cria o calendário e faz seu download pelo browser
+// Cria o calendário e faz seu download pelo browser
 function generateCalendar()
 {
 	// Um evento no calendário
@@ -254,8 +256,7 @@ function generateCalendar()
 		inicio_aula: "", // (formato: hhmmss)
 		fim_aula: "", // (formato: hhmmss)
 		
-		// Le a data e o horario da aula de uma string. Ex: LeHorario("Quinta - 08:30-09:20 (2)")
-		// Retorna true se o horario foi lido com sucesso, false se não foi.
+		// Lê a data e o horario da aula de uma string. Ex: LeHorario("Quinta - 08:30-09:20 (2)"). Salva os dados no event.
 		readTimeFromString: function(linha)
 		{
 			var bits = linha.split(/[\s,]+/)
@@ -280,11 +281,19 @@ function generateCalendar()
 			// DTSTART deve ser a primeira vez que o evento ocorre apos o inicio do semestre
 			// Se não for sincronizado, é undefined behaviour :( -> http://tools.ietf.org/search/rfc5545#page-167 (A.1 - 1)
 			// Com a data do inicio do semestre, ajusta o dia da primeira aula
-			var primeiraAula = readDate(Date.parse(inicio_semestre).addDays(indice_dias[this.dia_aula]).toString('dd/MM/yyyy'))
+			try
+			{
+				var primeiraAula = iCalDateFormat(Date.parse(inicio_semestre).addDays(indice_dias[this.dia_aula]).toString('dd/MM/yyyy'))
+			}
+			catch(err)
+			{
+				alert("Aviso: Não foi possivel criar o evento da aula \"" + this.nome_aula + "\" do dia \"" + this.dia_aula + "\"")
+				return
+			}
 			
 			Calendario += "DTSTART:" + primeiraAula + "T" + this.inicio_aula + "00\n" + // Inicio da aula
-						  "DTEND:" + primeiraAula + "T" + this.fim_aula + "00\n"	+  	// Fim da aula
-						  "RRULE:FREQ=WEEKLY;BYDAY=" + this.dia_aula + ";" + "UNTIL=" + readDate(fim_semestre) + "\n" + // Regra para repetir o evento no dia certo até o semestre acabar
+						  "DTEND:"   + primeiraAula + "T" + this.fim_aula    + "00\n" + // Fim da aula
+						  "RRULE:FREQ=WEEKLY;BYDAY=" + this.dia_aula + ";" + "UNTIL=" + iCalDateFormat(fim_semestre) + "\n" + // Regra para repetir o evento no dia certo até o semestre acabar
 						  "LOCATION:" + this.lugar_aula + "\n" + 					// Onde vai ser a aula
 						  "CATEGORIES:Aula\n" +			  						   	// Categoria do evento
 						  "SUMMARY:" + getDesc(this.nome_aula) + "\n" +  			// Nome da disciplina (nome do evento no calendario)
