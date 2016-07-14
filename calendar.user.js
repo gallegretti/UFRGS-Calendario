@@ -1,6 +1,6 @@
 ﻿// ==UserScript==
 // @name         UFRGS Calendar
-// @version      1.2
+// @version      1.2.1
 // @description  Adds a button that downloads a calendar file with the current activities the student is attending at UFRGS
 // @author       Gabriel Allegretti
 // @source		 https://github.com/gallegretti/UFRGS-Calendario
@@ -255,6 +255,7 @@ function generateCalendar()
 		dia_aula: "", // (usar o dicionario_dias, separado com virgulas cada ocorrência)
 		inicio_aula: "", // (formato: hhmmss)
 		fim_aula: "", // (formato: hhmmss)
+		EAD: false, // Ensino a distancia?
 		
 		// Lê a data e o horario da aula de uma string. Ex: LeHorario("Quinta - 08:30-09:20 (2)"). Salva os dados no event.
 		readTimeFromString: function(linha)
@@ -335,9 +336,24 @@ function generateCalendar()
 		event.codigo_aula = currentRow.cells[Column.turma].textContent.trim()
 		event.prof_aula = Array.prototype.map.call(currentRow.cells[Column.professores].children, function(obj) { return obj.textContent.trim() }).slice(1)
 		
+		// As disciplinas EAD tem na primeira linha escrito "Ensino a Distância"
+		var firstChildInnerText = currentRow.cells[Column.horario_e_local].children[0].textContent.trim()
+		var firstValidChild
+		if (firstChildInnerText.startsWith("Ensino a Distância"))
+		{
+			this.EAD = true
+			firstValidChild = 1
+		}
+		else
+		{
+			this.EAD = false
+			firstValidChild = 0
+		}
+		
 		// Algumas disciplinas tem um campo extra: "Observação", que quando existe, é o ultimo elemento na coluna horario_e_local
 		// Se existir esse campo, lê ele para a descrição do evento e decrementa o childrenLen para evitar que ele seja lido como um horario
 		var childElementCount = currentRow.cells[Column.horario_e_local].childElementCount
+		
 		var lastChildInnerText = currentRow.cells[Column.horario_e_local].children[childElementCount - 1].textContent.trim()
 		if (lastChildInnerText.startsWith("Observação"))
 		{
@@ -350,7 +366,7 @@ function generateCalendar()
 		}
 		
 		// Para cada dia que tem uma aula
-		for (var j = 0; j < childElementCount; j++)
+		for (var j = firstValidChild; j < childElementCount; j++)
 		{
 			var item = currentRow.cells[Column.horario_e_local].children[j]
 			
@@ -372,13 +388,20 @@ function generateCalendar()
 			}
 
 			// Lê o local
-			try
+			if (this.EAD)
 			{
-				event.lugar_aula = item.childNodes[SubRow.local].textContent.trim()
+				event.lugar_aula = "Ensino a Distância"
 			}
-			catch(err)
+			else
 			{
-				event.lugar_aula = "Não especificado";
+				try
+				{
+					event.lugar_aula = item.childNodes[SubRow.local].textContent.trim()
+				}
+				catch(err)
+				{
+					event.lugar_aula = "Não especificado";
+				}
 			}
 
 			// Cria o evento no calendario
