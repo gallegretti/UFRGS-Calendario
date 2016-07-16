@@ -1,6 +1,6 @@
 ﻿// ==UserScript==
 // @name         UFRGS Calendar
-// @version      1.2.1
+// @version      1.2.2
 // @description  Adds a button that downloads a calendar file with the current activities the student is attending at UFRGS
 // @author       Gabriel Allegretti
 // @source		 https://github.com/gallegretti/UFRGS-Calendario
@@ -229,7 +229,6 @@ function getDesc(string)
 	return string
 }
 
-
 // Lê uma string no formato dd/mm/aaaa e retorna uma string no formato do iCal
 // Ex: "03/08/2015" -> "20150803"
 function iCalDateFormat(linha)
@@ -238,7 +237,7 @@ function iCalDateFormat(linha)
 	if (date == null) {
 		throw "Data inválida";
 	}
-
+	
 	return date.toString("yyyymmdd");
 }
 
@@ -252,18 +251,18 @@ function generateCalendar()
 		descricao_aula: "",
 		prof_aula: [],
 		lugar_aula: "",
-		dia_aula: "", // (usar o dicionario_dias, separado com virgulas cada ocorrência)
+		dia_aula: "",    // (usar o dicionario_dias, separado com virgulas cada ocorrência)
 		inicio_aula: "", // (formato: hhmmss)
-		fim_aula: "", // (formato: hhmmss)
-		EAD: false, // Ensino a distancia?
+		fim_aula: "",    // (formato: hhmmss)
+		EAD: false,      // Ensino a distancia?
 		
-		// Lê a data e o horario da aula de uma string. Ex: LeHorario("Quinta - 08:30-09:20 (2)"). Salva os dados no event.
+		// Lê a data e o horário da aula de uma string. Ex: LeHorario("Quinta - 08:30-09:20 (2)"). Salva os dados no event.
 		readTimeFromString: function(linha)
 		{
 			var bits = linha.split(/[\s,]+/)
 			this.dia_aula = dicionario_dias[bits[0]]
-
-			// Le os horarios. Ex: bits[2] = "15:30-17:10"
+			
+			// Lê os horários. Ex: bits[2] = "15:30-17:10"
 			this.inicio_aula = bits[2].slice(0,5).replace(':','');
 			this.fim_aula = bits[2].slice(6).replace(':','');
 			
@@ -279,12 +278,13 @@ function generateCalendar()
 		writeEventToCalendar: function() 
 		{
 			Calendario += "BEGIN:VEVENT\n"
-			// DTSTART deve ser a primeira vez que o evento ocorre apos o inicio do semestre
+			// DTSTART deve ser a primeira vez que o evento ocorre apos o início do semestre
 			// Se não for sincronizado, é undefined behaviour :( -> http://tools.ietf.org/search/rfc5545#page-167 (A.1 - 1)
 			// Com a data do inicio do semestre, ajusta o dia da primeira aula
 			try
 			{
 				var primeiraAula = iCalDateFormat(Date.parse(inicio_semestre).addDays(indice_dias[this.dia_aula]).toString('dd/MM/yyyy'))
+				var ultimaAula = iCalDateFormat(fim_semestre)
 			}
 			catch(err)
 			{
@@ -294,20 +294,19 @@ function generateCalendar()
 			
 			Calendario += "DTSTART:" + primeiraAula + "T" + this.inicio_aula + "00\n" + // Inicio da aula
 						  "DTEND:"   + primeiraAula + "T" + this.fim_aula    + "00\n" + // Fim da aula
-						  "RRULE:FREQ=WEEKLY;BYDAY=" + this.dia_aula + ";" + "UNTIL=" + iCalDateFormat(fim_semestre) + "\n" + // Regra para repetir o evento no dia certo até o semestre acabar
-						  "LOCATION:" + this.lugar_aula + "\n" + 					// Onde vai ser a aula
-						  "CATEGORIES:Aula\n" +			  						   	// Categoria do evento
-						  "SUMMARY:" + getDesc(this.nome_aula) + "\n" +  			// Nome da disciplina (nome do evento no calendario)
-						  "DESCRIPTION:"										    // Descrição do evento
-			// Se a disciplina tinha uma Observação explícita, vai para a descrição
-			if (this.descricao_aula != "") 				
+						  "RRULE:FREQ=WEEKLY;BYDAY="      + this.dia_aula    + ";"    + "UNTIL=" + ultimaAula + "\n" + // Regra para repetir o evento no dia certo até o semestre acabar
+						  "LOCATION:" + this.lugar_aula + "\n" +           // Onde vai ser a aula
+						  "CATEGORIES:Aula\n" +	                           // Categoria do evento
+						  "SUMMARY:" + getDesc(this.nome_aula) + "\n" +    // Nome do evento no calendario
+						  "DESCRIPTION:"                                   // Descrição do evento
+			// Se a disciplina tem uma Observação explícita, vai para a descrição
+			if (this.descricao_aula != "")
 				Calendario += this.descricao_aula + "; " // Descricao_aula já começa com "Observação:"
 			Calendario += "Turma:" + getDesc(this.codigo_aula) + "; Professor(a):"
 			
 			// Adiciona cada professor
 			Calendario += getDesc(this.prof_aula.join('; ')) + "\n";
 			Calendario += "END:VEVENT\n"
-
 		},
 	}
 	
@@ -323,15 +322,15 @@ function generateCalendar()
 	for (var i = 1; i < table.rows.length; i++)
 	{
 		var currentRow = table.rows[i]
-
+		
 		// Colunas da tabela
 		Column = {
 			nome_disciplina : 1,
-			turma 			: 2,
+			turma           : 2,
 			horario_e_local : 3,
-			professores 	: 4
+			professores     : 4
 		}
-	
+		
 		event.nome_aula = currentRow.cells[Column.nome_disciplina].textContent.trim()
 		event.codigo_aula = currentRow.cells[Column.turma].textContent.trim()
 		event.prof_aula = Array.prototype.map.call(currentRow.cells[Column.professores].children, function(obj) { return obj.textContent.trim() }).slice(1)
@@ -350,8 +349,8 @@ function generateCalendar()
 			firstValidChild = 0
 		}
 		
-		// Algumas disciplinas tem um campo extra: "Observação", que quando existe, é o ultimo elemento na coluna horario_e_local
-		// Se existir esse campo, lê ele para a descrição do evento e decrementa o childrenLen para evitar que ele seja lido como um horario
+		// Algumas disciplinas tem um campo extra: "Observação", que quando existe, é o último elemento na coluna horario_e_local
+		// Se existir esse campo, lê ele para a descrição do evento e decrementa o childrenLen para evitar que ele seja lido como um horário
 		var childElementCount = currentRow.cells[Column.horario_e_local].childElementCount
 		
 		var lastChildInnerText = currentRow.cells[Column.horario_e_local].children[childElementCount - 1].textContent.trim()
@@ -373,10 +372,10 @@ function generateCalendar()
 			// Itens dentro da coluna horario_e_local
 			SubRow = {
 				horario : 0,
-				local	: 1,
+				local   : 1,
 			}
-		
-			// Lê o horario
+			
+			// Lê o horário
 			try
 			{
 				event.readTimeFromString(item.childNodes[SubRow.horario].textContent.trim())
@@ -386,7 +385,7 @@ function generateCalendar()
 				alert("Aviso: \"" + event.nome_aula + "\" não tem horário definido para o dia \"" + event.dia_aula + "\".\nUm evento para essa aula não será gerado.")
 				continue
 			}
-
+			
 			// Lê o local
 			if (this.EAD)
 			{
@@ -403,18 +402,20 @@ function generateCalendar()
 					event.lugar_aula = "Não especificado";
 				}
 			}
-
-			// Cria o evento no calendario
+			
+			// Cria o evento no calendário
 			event.writeEventToCalendar()
 		}
 	}
 	
 	if (com_semana_academica)
+	{
 		EventoSemanaAcademica()
-
+	}
+	
 	Calendario += "END:VCALENDAR"
-
-	// Cria o arquivo do calendario
+	
+	// Cria o arquivo do calendário
 	var file = window.document.createElement('a');
 	file.href = window.URL.createObjectURL(new Blob([Calendario], {type: 'text/calendar;charset=UTF-8'}));
 	file.download = "calendario.ics";
@@ -425,7 +426,7 @@ function generateCalendar()
 	document.body.removeChild(file)
 }
 
-// Cria um botão na página, que ao ser clicado, faz o downlaod do calendário
+// Cria um botão na página que, ao ser clicado, faz o downlaod do calendário
 function addButton()
 {
 	// O botão será inserido dentro de um 'div' e de um 'form', igual ao botão 'Imprimir'
@@ -443,7 +444,7 @@ function addButton()
 	button.onclick = generateCalendar
 	button.value = "Baixar calendário (.ics)"
 	
-	// O botão de 'Imprimir' usa posição absoluta, então usa tambem para ficar do lado dele
+	// O botão de 'Imprimir' usa posição absoluta, então usa também para ficar do lado dele
 	button.style.position = "absolute"
 	button.style.right = "150px"
 	button.style.top = "145px"
