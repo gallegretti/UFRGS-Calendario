@@ -161,10 +161,10 @@ return((r[1].length===0)?r[0]:null);};};$D.parseExact=function(s,fx){return $D.g
 
 // Variáveis customizaveis
 var inicio_semestre = "01/08/2016", // (dd/mm/aaaa) Data do inicio do semestre
-	fim_semestre = "21/12/2016", // (dd/mm/aaaa) Data do fim do semestre
-	com_semana_academica = true, // Se deve adicionar o evento da semana acadêmica ao calendario
-	inicio_semana_academica = "12/09/2016", // (dd/mm/aaaa) Data do inicio da semana acadêmica
-	fim_semana_academica = "17/09/2016"    // (dd/mm/aaaa) Data do fim da semana acadêmica. Usar o dia seguinte do último dia de programações
+    fim_semestre = "21/12/2016",    // (dd/mm/aaaa) Data do fim do semestre
+    com_semana_academica = true,    // Se deve adicionar o evento da semana acadêmica ao calendario
+    inicio_semana_academica = "12/09/2016", // (dd/mm/aaaa) Data do inicio da semana acadêmica
+    fim_semana_academica = "17/09/2016"     // (dd/mm/aaaa) Data do fim da semana acadêmica. Usar o dia seguinte do último dia de programações
 
 // Adiciona o header do calendario
 var Calendario = "BEGIN:VCALENDAR\nVERSION:2.0\n"
@@ -214,10 +214,10 @@ function EventoSemanaAcademica()
 	}
 	
 	Calendario += "BEGIN:VEVENT\n" + 
-				  "DTSTART;VALUE=DATE:" + inicio_evento + "\n" +
-				  "DTEND;VALUE=DATE:"   + fim_evento    + "\n" +
-				  "SUMMARY:Semana Acadêmica da UFRGS\n" +
-				  "END:VEVENT\n"
+	              "DTSTART;VALUE=DATE:" + inicio_evento + "\n" +
+	              "DTEND;VALUE=DATE:"   + fim_evento    + "\n" +
+	              "SUMMARY:Semana Acadêmica da UFRGS\n" +
+	              "END:VEVENT\n"
 }
 
 function getDesc(string)
@@ -293,20 +293,21 @@ function generateCalendar()
 			}
 			
 			Calendario += "DTSTART:" + primeiraAula + "T" + this.inicio_aula + "00\n" + // Inicio da aula
-						  "DTEND:"   + primeiraAula + "T" + this.fim_aula    + "00\n" + // Fim da aula
-						  "RRULE:FREQ=WEEKLY;BYDAY="      + this.dia_aula    + ";"    + "UNTIL=" + ultimaAula + "\n" + // Regra para repetir o evento no dia certo até o semestre acabar
-						  "LOCATION:" + this.lugar_aula + "\n" +           // Onde vai ser a aula
-						  "CATEGORIES:Aula\n" +	                           // Categoria do evento
-						  "SUMMARY:" + getDesc(this.nome_aula) + "\n" +    // Nome do evento no calendario
-						  "DESCRIPTION:"                                   // Descrição do evento
+			              "DTEND:"   + primeiraAula + "T" + this.fim_aula    + "00\n" + // Fim da aula
+			              "RRULE:FREQ=WEEKLY;BYDAY="      + this.dia_aula    + ";"    + "UNTIL=" + ultimaAula + "\n" + // Regra para repetir o evento no dia certo até o semestre acabar
+			              "LOCATION:" + this.lugar_aula        + "\n" +    // Onde vai ser a aula
+			              "CATEGORIES:Aula"                    + "\n" +    // Categoria do evento
+			              "SUMMARY:" + getDesc(this.nome_aula) + "\n" +    // Nome do evento no calendario
+			              "DESCRIPTION:"                                   // Descrição do evento
 			// Se a disciplina tem uma Observação explícita, vai para a descrição
 			if (this.descricao_aula != "")
+			{
 				Calendario += this.descricao_aula + "; " // Descricao_aula já começa com "Observação:"
+			}
+			// Adiciona turma e professor(es\as)
 			Calendario += "Turma:" + getDesc(this.codigo_aula) + "; Professor(a):"
-			
-			// Adiciona cada professor
-			Calendario += getDesc(this.prof_aula.join('; ')) + "\n";
-			Calendario += "END:VEVENT\n"
+			Calendario += getDesc(this.prof_aula.join('; '))
+			Calendario += "\nEND:VEVENT\n"
 		},
 	}
 	
@@ -317,19 +318,18 @@ function generateCalendar()
 		alert("Erro: Não foi possível ler a tabela de horários!")
 		return
 	}
-
+	
+	// Colunas da tabela
+	Column = {
+		nome_disciplina : 1,
+		turma           : 2,
+		horario_e_local : 3,
+		professores     : 4
+	}
 	// Para cada disciplina (linha 0 é o 'header', então começa na 1)
 	for (var i = 1; i < table.rows.length; i++)
 	{
 		var currentRow = table.rows[i]
-		
-		// Colunas da tabela
-		Column = {
-			nome_disciplina : 1,
-			turma           : 2,
-			horario_e_local : 3,
-			professores     : 4
-		}
 		
 		event.nome_aula = currentRow.cells[Column.nome_disciplina].textContent.trim()
 		event.codigo_aula = currentRow.cells[Column.turma].textContent.trim()
@@ -364,16 +364,15 @@ function generateCalendar()
 			event.descricao_aula = ""
 		}
 		
+		// Itens dentro da coluna horario_e_local
+		SubRow = {
+			horario : 0,
+			local   : 1,
+		}
 		// Para cada dia que tem uma aula
 		for (var j = firstValidChild; j < childElementCount; j++)
 		{
 			var item = currentRow.cells[Column.horario_e_local].children[j]
-			
-			// Itens dentro da coluna horario_e_local
-			SubRow = {
-				horario : 0,
-				local   : 1,
-			}
 			
 			// Lê o horário
 			try
@@ -426,7 +425,7 @@ function generateCalendar()
 	document.body.removeChild(file)
 }
 
-// Cria um botão na página que, ao ser clicado, faz o downlaod do calendário
+// Cria um botão na página que, ao ser clicado, faz o download do calendário
 function addButton()
 {
 	// O botão será inserido dentro de um 'div' e de um 'form', igual ao botão 'Imprimir'
