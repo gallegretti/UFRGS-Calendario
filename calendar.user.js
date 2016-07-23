@@ -164,10 +164,10 @@ var inicio_semestre = "01/08/2016", // (dd/mm/aaaa) Data do inicio do semestre
     fim_semestre = "21/12/2016",    // (dd/mm/aaaa) Data do fim do semestre
     com_semana_academica = true,    // Se deve adicionar o evento da semana acadêmica ao calendario
     inicio_semana_academica = "12/09/2016", // (dd/mm/aaaa) Data do inicio da semana acadêmica
-    fim_semana_academica = "17/09/2016"     // (dd/mm/aaaa) Data do fim da semana acadêmica. Usar o dia seguinte do último dia de programações
+    fim_semana_academica = "17/09/2016";     // (dd/mm/aaaa) Data do fim da semana acadêmica. Usar o dia seguinte do último dia de programações
 
 // Adiciona o header do calendario
-var Calendario = "BEGIN:VCALENDAR\nVERSION:2.0\n"
+var Calendario = "BEGIN:VCALENDAR\nVERSION:2.0\n";
 	
 // Adiciona a funcao startsWith() para strings
 // http://stackoverflow.com/questions/646628/how-to-check-if-a-string-startswith-another-string
@@ -186,7 +186,7 @@ var dicionario_dias = {
 	"Sexta"  : "FR",
 	"Sábado" : "SA",
 	"Domingo": "SU" 
-}
+};
 
 // Dado um dia da semana, retorna seu indice
 var indice_dias = {
@@ -197,36 +197,36 @@ var indice_dias = {
 	"FR" : 4,	
 	"SA" : 5,
 	"SU" : 6
-}
+};
 
 // Cria o evento da semana acadêmica no calendário
 function EventoSemanaAcademica()
 {
 	try
 	{
-		var inicio_evento = iCalDateFormat(inicio_semana_academica)
-		var fim_evento =  iCalDateFormat(fim_semana_academica)
+		var inicio_evento = iCalDateFormat(inicio_semana_academica);
+		var fim_evento =  iCalDateFormat(fim_semana_academica);
 	}
 	catch(err)
 	{
-		alert("Aviso: Não foi possivel criar o evento da semana acadêmica pois as datas são inválidas")
-		return
+		alert("Aviso: Não foi possivel criar o evento da semana acadêmica pois as datas são inválidas");
+		return;
 	}
 	
 	Calendario += "BEGIN:VEVENT\n" + 
 	              "DTSTART;VALUE=DATE:" + inicio_evento + "\n" +
 	              "DTEND;VALUE=DATE:"   + fim_evento    + "\n" +
 	              "SUMMARY:Semana Acadêmica da UFRGS\n" +
-	              "END:VEVENT\n"
+	              "END:VEVENT\n";
 }
 
 function getDesc(string)
 {
 	if (!string || 0 === string.length) {
-		return "Não especificado"
+		return "Não especificado";
 	}
 	
-	return string
+	return string;
 }
 
 // Lê uma string no formato dd/mm/aaaa e retorna uma string no formato do iCal
@@ -234,7 +234,7 @@ function getDesc(string)
 function iCalDateFormat(linha)
 {
 	var date = Date.parse(linha); 
-	if (date == null) {
+	if (date === null) {
 		throw "Data inválida";
 	}
 	
@@ -259,64 +259,65 @@ function generateCalendar()
 		// Lê a data e o horário da aula de uma string. Ex: LeHorario("Quinta - 08:30-09:20 (2)"). Salva os dados no event.
 		readTimeFromString: function(linha)
 		{
-			var bits = linha.split(/[\s,]+/)
-			this.dia_aula = dicionario_dias[bits[0]]
+			var bits = linha.split(/[\s,]+/);
+			this.dia_aula = dicionario_dias[bits[0]];
 			
 			// Lê os horários. Ex: bits[2] = "15:30-17:10"
 			this.inicio_aula = bits[2].slice(0,5).replace(':','');
 			this.fim_aula = bits[2].slice(6).replace(':','');
 			
 			// Exatamente 4 números
-			var patt = '^[0-9]{4}$'
+			var patt = '^[0-9]{4}$';
 			if (this.inicio_aula.match(patt) == null || this.fim_aula.match(patt) == null || this.dia_aula == null)
 			{
-				throw "Data inválida"
+				throw "Data inválida";
 			}
 		},
 		
 		// Escreve o evento no calendário
-		writeEventToCalendar: function() 
+		writeEventToCalendar: function()
 		{
-			Calendario += "BEGIN:VEVENT\n"
+			Calendario += "BEGIN:VEVENT\n";
 			// DTSTART deve ser a primeira vez que o evento ocorre apos o início do semestre
 			// Se não for sincronizado, é undefined behaviour :( -> http://tools.ietf.org/search/rfc5545#page-167 (A.1 - 1)
 			// Com a data do inicio do semestre, ajusta o dia da primeira aula
+			var primeiraAula;
+			var ultimaAula;
 			try
 			{
-				var primeiraAula = iCalDateFormat(Date.parse(inicio_semestre).addDays(indice_dias[this.dia_aula]).toString('dd/MM/yyyy'))
-				var ultimaAula = iCalDateFormat(fim_semestre)
+				primeiraAula = iCalDateFormat(Date.parse(inicio_semestre).addDays(indice_dias[this.dia_aula]).toString('dd/MM/yyyy'));
+				ultimaAula = iCalDateFormat(fim_semestre);
 			}
 			catch(err)
 			{
-				alert("Aviso: Não foi possivel criar o evento da aula \"" + this.nome_aula + "\" do dia \"" + this.dia_aula + "\"")
-				return
+				alert("Aviso: Não foi possivel criar o evento da aula \"" + this.nome_aula + "\" do dia \"" + this.dia_aula + "\"");
+				return;
 			}
 			
 			Calendario += "DTSTART:" + primeiraAula + "T" + this.inicio_aula + "00\n" + // Inicio da aula
 			              "DTEND:"   + primeiraAula + "T" + this.fim_aula    + "00\n" + // Fim da aula
-			              "RRULE:FREQ=WEEKLY;BYDAY="      + this.dia_aula    + ";"    + "UNTIL=" + ultimaAula + "\n" + // Regra para repetir o evento no dia certo até o semestre acabar
+			              "RRULE:FREQ=WEEKLY;BYDAY="      + this.dia_aula    + ";UNTIL=" + ultimaAula + "\n" + // Regra para repetir o evento no dia certo até o semestre acabar
 			              "LOCATION:" + this.lugar_aula        + "\n" +    // Onde vai ser a aula
 			              "CATEGORIES:Aula"                    + "\n" +    // Categoria do evento
 			              "SUMMARY:" + getDesc(this.nome_aula) + "\n" +    // Nome do evento no calendario
-			              "DESCRIPTION:"                                   // Descrição do evento
+			              "DESCRIPTION:";                                  // Descrição do evento
 			// Se a disciplina tem uma Observação explícita, vai para a descrição
-			if (this.descricao_aula != "")
+			if (this.descricao_aula !== "")
 			{
-				Calendario += this.descricao_aula + "; " // Descricao_aula já começa com "Observação:"
+				Calendario += this.descricao_aula + "; "; // Descricao_aula já começa com "Observação:"
 			}
 			// Adiciona turma e professor(es\as)
-			Calendario += "Turma:" + getDesc(this.codigo_aula) + "; Professor(a):"
-			Calendario += getDesc(this.prof_aula.join('; '))
-			Calendario += "\nEND:VEVENT\n"
+			Calendario += "Turma:" + getDesc(this.codigo_aula) + "; Professor(a):" + getDesc(this.prof_aula.join('; ')) + 
+			              "\nEND:VEVENT\n";
 		},
-	}
+	};
 	
 	// Acessa a tabela dos horários
-	var table = document.getElementsByClassName("modelo1")[1]
+	var table = document.getElementsByClassName("modelo1")[1];
 	if (table === undefined)
 	{
-		alert("Erro: Não foi possível ler a tabela de horários!")
-		return
+		alert("Erro: Não foi possível ler a tabela de horários!");
+		return;
 	}
 	
 	// Colunas da tabela
@@ -325,76 +326,76 @@ function generateCalendar()
 		turma           : 2,
 		horario_e_local : 3,
 		professores     : 4
-	}
+	};
 	// Para cada disciplina (linha 0 é o 'header', então começa na 1)
 	for (var i = 1; i < table.rows.length; i++)
 	{
-		var currentRow = table.rows[i]
+		var currentRow = table.rows[i];
 		
-		event.nome_aula = currentRow.cells[Column.nome_disciplina].textContent.trim()
-		event.codigo_aula = currentRow.cells[Column.turma].textContent.trim()
-		event.prof_aula = Array.prototype.map.call(currentRow.cells[Column.professores].children, function(obj) { return obj.textContent.trim() }).slice(1)
+		event.nome_aula = currentRow.cells[Column.nome_disciplina].textContent.trim();
+		event.codigo_aula = currentRow.cells[Column.turma].textContent.trim();
+		event.prof_aula = Array.prototype.map.call(currentRow.cells[Column.professores].children, function(obj) { return obj.textContent.trim(); }).slice(1);
 		
 		// As disciplinas EAD tem na primeira linha escrito "Ensino a Distância"
-		var firstChildInnerText = currentRow.cells[Column.horario_e_local].children[0].textContent.trim()
-		var firstValidChild
+		var firstChildInnerText = currentRow.cells[Column.horario_e_local].children[0].textContent.trim();
+		var firstValidChild;
 		if (firstChildInnerText.startsWith("Ensino a Distância"))
 		{
-			this.EAD = true
-			firstValidChild = 1
+			this.EAD = true;
+			firstValidChild = 1;
 		}
 		else
 		{
-			this.EAD = false
-			firstValidChild = 0
+			this.EAD = false;
+			firstValidChild = 0;
 		}
 		
 		// Algumas disciplinas tem um campo extra: "Observação", que quando existe, é o último elemento na coluna horario_e_local
 		// Se existir esse campo, lê ele para a descrição do evento e decrementa o childrenLen para evitar que ele seja lido como um horário
-		var childElementCount = currentRow.cells[Column.horario_e_local].childElementCount
+		var childElementCount = currentRow.cells[Column.horario_e_local].childElementCount;
 		
-		var lastChildInnerText = currentRow.cells[Column.horario_e_local].children[childElementCount - 1].textContent.trim()
+		var lastChildInnerText = currentRow.cells[Column.horario_e_local].children[childElementCount - 1].textContent.trim();
 		if (lastChildInnerText.startsWith("Observação"))
 		{
-			event.descricao_aula = lastChildInnerText
-			childElementCount--
+			event.descricao_aula = lastChildInnerText;
+			childElementCount--;
 		}
 		else
 		{
-			event.descricao_aula = ""
+			event.descricao_aula = "";
 		}
 		
 		// Itens dentro da coluna horario_e_local
 		SubRow = {
 			horario : 0,
 			local   : 1,
-		}
+		};
 		// Para cada dia que tem uma aula
 		for (var j = firstValidChild; j < childElementCount; j++)
 		{
-			var item = currentRow.cells[Column.horario_e_local].children[j]
+			var item = currentRow.cells[Column.horario_e_local].children[j];
 			
 			// Lê o horário
 			try
 			{
-				event.readTimeFromString(item.childNodes[SubRow.horario].textContent.trim())
+				event.readTimeFromString(item.childNodes[SubRow.horario].textContent.trim());
 			}
 			catch(err)
 			{
-				alert("Aviso: \"" + event.nome_aula + "\" não tem horário definido para o dia \"" + event.dia_aula + "\".\nUm evento para essa aula não será gerado.")
-				continue
+				alert("Aviso: \"" + event.nome_aula + "\" não tem horário definido para o dia \"" + event.dia_aula + "\".\nUm evento para essa aula não será gerado.");
+				continue;
 			}
 			
 			// Lê o local
 			if (this.EAD)
 			{
-				event.lugar_aula = "Ensino a Distância"
+				event.lugar_aula = "Ensino a Distância";
 			}
 			else
 			{
 				try
 				{
-					event.lugar_aula = item.childNodes[SubRow.local].textContent.trim()
+					event.lugar_aula = item.childNodes[SubRow.local].textContent.trim();
 				}
 				catch(err)
 				{
@@ -403,16 +404,16 @@ function generateCalendar()
 			}
 			
 			// Cria o evento no calendário
-			event.writeEventToCalendar()
+			event.writeEventToCalendar();
 		}
 	}
 	
 	if (com_semana_academica)
 	{
-		EventoSemanaAcademica()
+		EventoSemanaAcademica();
 	}
 	
-	Calendario += "END:VCALENDAR"
+	Calendario += "END:VCALENDAR";
 	
 	// Cria o arquivo do calendário
 	var file = window.document.createElement('a');
@@ -420,36 +421,36 @@ function generateCalendar()
 	file.download = "calendario.ics";
 	
 	// Faz o download
-	document.body.appendChild(file)
+	document.body.appendChild(file);
 	file.click();
-	document.body.removeChild(file)
+	document.body.removeChild(file);
 }
 
 // Cria um botão na página que, ao ser clicado, faz o download do calendário
 function addButton()
 {
 	// O botão será inserido dentro de um 'div' e de um 'form', igual ao botão 'Imprimir'
-	var principal = document.createElement("div")
-	principal.className = "bt_calendario"
-	var form = document.createElement("form")
-	principal.appendChild(form)
+	var principal = document.createElement("div");
+	principal.className = "bt_calendario";
+	var form = document.createElement("form");
+	principal.appendChild(form);
 	
 	// Cria o botão de gerar o calendário
-	var button = document.createElement("input")
-	form.appendChild(button)
-	button.className = "button"
-	button.type = "button"
-	button.id = "botaoCalendario"
-	button.onclick = generateCalendar
-	button.value = "Baixar calendário (.ics)"
+	var button = document.createElement("input");
+	form.appendChild(button);
+	button.className = "button";
+	button.type = "button";
+	button.id = "botaoCalendario";
+	button.onclick = generateCalendar;
+	button.value = "Baixar calendário (.ics)";
 	
 	// O botão de 'Imprimir' usa posição absoluta, então usa também para ficar do lado dele
-	button.style.position = "absolute"
-	button.style.right = "150px"
-	button.style.top = "145px"
+	button.style.position = "absolute";
+	button.style.right = "150px";
+	button.style.top = "145px";
 	
 	// Insere antes do botão 'Imprimir'
-	var element = document.getElementById("conteudo")
-	element.insertBefore(principal,element.firstChild)
+	var element = document.getElementById("conteudo");
+	element.insertBefore(principal,element.firstChild);
 }
-addButton()
+addButton();
