@@ -1,6 +1,6 @@
 ﻿// ==UserScript==
 // @name         UFRGS Calendar
-// @version      1.2.2
+// @version      1.2.3
 // @description  Adds a button that downloads a calendar file with the current activities the student is attending at UFRGS
 // @author       Gabriel Allegretti
 // @source		 https://github.com/gallegretti/UFRGS-Calendario
@@ -194,7 +194,7 @@ var indice_dias = {
 	"TU" : 1,
 	"WE" : 2,
 	"TH" : 3,
-	"FR" : 4,	
+	"FR" : 4,
 	"SA" : 5,
 	"SU" : 6
 };
@@ -213,7 +213,7 @@ function EventoSemanaAcademica()
 		return;
 	}
 	
-	Calendario += "BEGIN:VEVENT\n" + 
+	Calendario += "BEGIN:VEVENT\n" +
 	              "DTSTART;VALUE=DATE:" + inicio_evento + "\n" +
 	              "DTEND;VALUE=DATE:"   + fim_evento    + "\n" +
 	              "SUMMARY:Semana Acadêmica da UFRGS\n" +
@@ -233,7 +233,7 @@ function getDesc(string)
 // Ex: "03/08/2015" -> "20150803"
 function iCalDateFormat(linha)
 {
-	var date = Date.parse(linha); 
+	var date = Date.parse(linha);
 	if (date === null) {
 		throw "Data inválida";
 	}
@@ -268,7 +268,7 @@ function generateCalendar()
 			
 			// Exatamente 4 números
 			var patt = '^[0-9]{4}$';
-			if (this.inicio_aula.match(patt) == null || this.fim_aula.match(patt) == null || this.dia_aula == null)
+			if (this.inicio_aula.match(patt) === null || this.fim_aula.match(patt) === null || this.dia_aula === null)
 			{
 				throw "Data inválida";
 			}
@@ -281,12 +281,10 @@ function generateCalendar()
 			// DTSTART deve ser a primeira vez que o evento ocorre apos o início do semestre
 			// Se não for sincronizado, é undefined behaviour :( -> http://tools.ietf.org/search/rfc5545#page-167 (A.1 - 1)
 			// Com a data do inicio do semestre, ajusta o dia da primeira aula
-			var primeiraAula;
-			var ultimaAula;
 			try
 			{
-				primeiraAula = iCalDateFormat(Date.parse(inicio_semestre).addDays(indice_dias[this.dia_aula]).toString('dd/MM/yyyy'));
-				ultimaAula = iCalDateFormat(fim_semestre);
+				var primeiraAula = iCalDateFormat(Date.parse(inicio_semestre).addDays(indice_dias[this.dia_aula]).toString('dd/MM/yyyy'));
+				var ultimaAula = iCalDateFormat(fim_semestre);
 			}
 			catch(err)
 			{
@@ -305,6 +303,10 @@ function generateCalendar()
 			if (this.descricao_aula !== "")
 			{
 				Calendario += this.descricao_aula + "; "; // Descricao_aula já começa com "Observação:"
+			}
+			if (this.EAD)
+			{
+				Calendario += "Aula a Distância; ";
 			}
 			// Adiciona turma e professor(es\as)
 			Calendario += "Turma:" + getDesc(this.codigo_aula) + "; Professor(a):" + getDesc(this.prof_aula.join('; ')) + 
@@ -334,7 +336,10 @@ function generateCalendar()
 		
 		event.nome_aula = currentRow.cells[Column.nome_disciplina].textContent.trim();
 		event.codigo_aula = currentRow.cells[Column.turma].textContent.trim();
-		event.prof_aula = Array.prototype.map.call(currentRow.cells[Column.professores].children, function(obj) { return obj.textContent.trim(); }).slice(1);
+		// Cria um array com os nomes dos professores
+		let array_professores = Array.prototype.map.call(currentRow.cells[Column.professores].children, function(obj) { return obj.textContent.trim(); }).slice(1);
+		// Normaliza o nome dos professores (Primeira letra maiúscula, outras minúsculas)
+		event.prof_aula = array_professores.map(function(prof) { return prof.split(" ").map(function(nome) { return nome[0].toUpperCase() + nome.slice(1).toLowerCase(); } ).join(" "); } );
 		
 		// As disciplinas EAD tem na primeira linha escrito "Ensino a Distância"
 		var firstChildInnerText = currentRow.cells[Column.horario_e_local].children[0].textContent.trim();
@@ -387,22 +392,22 @@ function generateCalendar()
 			}
 			
 			// Lê o local
-			if (this.EAD)
+			try
 			{
-				event.lugar_aula = "Ensino a Distância";
+				event.lugar_aula = item.childNodes[SubRow.local].textContent.trim();
 			}
-			else
+			catch(err)
 			{
-				try
+				if (this.EAD)
 				{
-					event.lugar_aula = item.childNodes[SubRow.local].textContent.trim();
+					event.lugar_aula = "Ensino a Distância";
 				}
-				catch(err)
+				else
 				{
 					event.lugar_aula = "Não especificado";
 				}
 			}
-			
+		
 			// Cria o evento no calendário
 			event.writeEventToCalendar();
 		}
