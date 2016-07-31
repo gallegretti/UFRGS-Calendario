@@ -238,7 +238,7 @@ function iCalDateFormat(linha)
 		throw "Data inválida";
 	}
 	
-	return date.toString("yyyymmdd");
+	return date.toString("yyyyMMdd");
 }
 
 // Cria o calendário e faz seu download pelo browser
@@ -337,7 +337,7 @@ function generateCalendar()
 		event.nome_aula = currentRow.cells[Column.nome_disciplina].textContent.trim();
 		event.codigo_aula = currentRow.cells[Column.turma].textContent.trim();
 		// Cria um array com os nomes dos professores
-		let array_professores = Array.prototype.map.call(currentRow.cells[Column.professores].children, function(obj) { return obj.textContent.trim(); }).slice(1);
+		var array_professores = Array.prototype.map.call(currentRow.cells[Column.professores].children, function(obj) { return obj.textContent.trim(); }).slice(1);
 		// Normaliza o nome dos professores (Primeira letra maiúscula, outras minúsculas)
 		event.prof_aula = array_professores.map(function(prof) { return prof.split(" ").map(function(nome) { return nome[0].toUpperCase() + nome.slice(1).toLowerCase(); } ).join(" "); } );
 		
