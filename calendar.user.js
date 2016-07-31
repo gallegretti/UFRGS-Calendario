@@ -1,6 +1,6 @@
 ﻿// ==UserScript==
 // @name         UFRGS Calendar
-// @version      1.2.3
+// @version      1.2.4
 // @description  Adds a button that downloads a calendar file with the current activities the student is attending at UFRGS
 // @author       Gabriel Allegretti
 // @source		 https://github.com/gallegretti/UFRGS-Calendario
