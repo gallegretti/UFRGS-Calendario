@@ -1,6 +1,6 @@
 ﻿// ==UserScript==
 // @name         UFRGS Calendar
-// @version      1.2.4
+// @version      1.2.5
 // @description  Adds a button that downloads a calendar file with the current activities the student is attending at UFRGS
 // @author       Gabriel Allegretti
 // @source		 https://github.com/gallegretti/UFRGS-Calendario
@@ -160,9 +160,9 @@ return((r[1].length===0)?r[0]:null);};};$D.parseExact=function(s,fx){return $D.g
 
 
 // Variáveis customizaveis
-var inicio_semestre = "01/08/2016", // (dd/mm/aaaa) Data do inicio do semestre
-    fim_semestre = "21/12/2016",    // (dd/mm/aaaa) Data do fim do semestre
-    com_semana_academica = true,    // Se deve adicionar o evento da semana acadêmica ao calendario
+var inicio_semestre = "05/03/2018", // (dd/mm/aaaa) Data do inicio do semestre
+    fim_semestre = "14/07/2018",    // (dd/mm/aaaa) Data do fim do semestre
+    com_semana_academica = false,    // Se deve adicionar o evento da semana acadêmica ao calendario
     inicio_semana_academica = "12/09/2016", // (dd/mm/aaaa) Data do inicio da semana acadêmica
     fim_semana_academica = "17/09/2016";     // (dd/mm/aaaa) Data do fim da semana acadêmica. Usar o dia seguinte do último dia de programações
 
